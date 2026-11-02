@@ -120,5 +120,14 @@ window.StudyStats = (() => {
       .map(({ order, ...group }) => ({ ...group, percentage: total === 0 ? 0 : group.seconds / total * 100 }));
     return { total, rows };
   }
-  return { totalSeconds, summarize, subjectBreakdown, weeklyActivity };
+  function sortRecordsByDate(records) {
+    return records.slice().sort((a, b) => b.date.localeCompare(a.date) || Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  }
+
+  function formatDuration(seconds) {
+    if (!Number.isSafeInteger(seconds) || seconds < 0) throw new Error("Invalid study duration.");
+    return [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60]
+      .map(value => String(value).padStart(2, "0")).join(":");
+  }
+  return { totalSeconds, summarize, subjectBreakdown, weeklyActivity, sortRecordsByDate, formatDuration };
 })();

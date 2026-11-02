@@ -38,8 +38,7 @@ window.Records = (() => {
   }
 
   function formatTime(seconds) {
-    return [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60]
-      .map(value => String(value).padStart(2, "0")).join(":");
+    return StudyStats.formatDuration(seconds);
   }
 
   // This interval only repaints; elapsed time never depends on callback counts.
@@ -317,8 +316,7 @@ window.Records = (() => {
       renderTotal(savedRecords);
       renderPeriods(savedRecords);
       renderActivity(savedRecords);
-      const records = savedRecords.slice().sort((a, b) =>
-        b.date.localeCompare(a.date) || Date.parse(b.createdAt) - Date.parse(a.createdAt));
+      const records = StudyStats.sortRecordsByDate(savedRecords);
       let subjects = [];
       try {
         subjects = StudyStorage.getSubjects();

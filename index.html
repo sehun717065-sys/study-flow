@@ -89,9 +89,11 @@
           <section class="stats-grid" aria-label="Study summary">
             <article class="stat-card">
               <div class="stat-card-top"><span class="stat-icon icon-blue"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3.3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="stat-caption">TODAY</span></div>
-              <p class="stat-value">0<span class="stat-unit">h</span> <span class="stat-minutes">00</span><span class="stat-unit">m</span></p>
+              <p class="stat-value dashboard-study-value" id="dashboard-today-time" aria-live="polite">—</p>
               <p class="stat-label">Study time</p>
-              <p class="stat-footnote">Your focus time for today</p>
+              <p class="stat-footnote" id="dashboard-study-date">Saved study time for today</p>
+              <div class="dashboard-study-total"><span class="stat-caption">TOTAL · All-time</span><p id="dashboard-total-time" class="dashboard-study-value" aria-live="polite">—</p></div>
+              <p id="dashboard-study-error" class="error-message" role="alert" hidden></p>
             </article>
             <article class="stat-card">
               <div class="stat-card-top"><span class="stat-icon icon-violet"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H20v15.5H6.5A2.5 2.5 0 0 1 4 17V6.5Z" stroke="currentColor" stroke-width="1.8"/><path d="M4 7h13M8 4v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="stat-caption">YOUR CLASSES</span></div>
@@ -117,25 +119,34 @@
             </article>
 
             <article class="panel recent-panel">
-              <div class="panel-heading"><div><p class="panel-kicker">YOUR PROGRESS</p><h2>Recent study</h2></div><span class="panel-heading-icon recent-heading-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3.4 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
-              <div class="empty-state compact-empty"><span class="empty-illustration book-empty" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M24 16c-4-4-10-4-15-2v23c5-2 11-2 15 2m0-23c4-4 10-4 15-2v23c-5-2-11-2-15 2m0-23v23" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 21c2-.5 4-.4 6 .2m-6 5c2-.5 4-.4 6 .2m8-.2c2-.6 4-.7 6-.2m-6 5c2-.6 4-.7 6-.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><h3>Your study story starts here</h3><p>Once you log a session, your recent activity will show up here.</p></div>
+              <div class="panel-heading"><div><p class="panel-kicker">YOUR PROGRESS</p><h2>Recent Study Sessions</h2></div><span class="panel-heading-icon recent-heading-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3.4 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+              <p id="dashboard-recent-records-error" class="error-message" role="alert" hidden></p>
+              <p id="dashboard-recent-subjects-error" class="error-message" role="alert" hidden></p>
+              <ul id="dashboard-recent-list" class="dashboard-recent-list" aria-label="Recent saved study sessions" hidden></ul>
+              <div id="dashboard-recent-empty" class="empty-state compact-empty"><span class="empty-illustration book-empty" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M24 16c-4-4-10-4-15-2v23c5-2 11-2 15 2m0-23c4-4 10-4 15-2v23c-5-2-11-2-15 2m0-23v23" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 21c2-.5 4-.4 6 .2m-6 5c2-.5 4-.4 6 .2m8-.2c2-.6 4-.7 6-.2m-6 5c2-.6 4-.7 6-.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><h3>Your study story starts here</h3><p>Once you log a session, your recent activity will show up here.</p></div>
             </article>
           </section>
 
           <section class="panel chart-panel" aria-labelledby="weekly-title">
             <div class="panel-heading chart-heading"><div><p class="panel-kicker">BUILDING MOMENTUM</p><h2 id="weekly-title">Weekly study time</h2></div><span class="range-label">This week <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
-            <div class="chart-wrap">
-              <div class="chart-y-labels" aria-hidden="true"><span>3h</span><span>2h</span><span>1h</span><span>0</span></div>
-              <svg class="weekly-chart" viewBox="0 0 720 184" preserveAspectRatio="none" role="img" aria-label="Weekly study time chart. No study sessions have been recorded yet.">
-                <defs><linearGradient id="chart-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7599f8" stop-opacity=".17"/><stop offset="1" stop-color="#7599f8" stop-opacity="0"/></linearGradient></defs>
-                <path class="chart-gridline" d="M0 14.5H720M0 62.5H720M0 110.5H720M0 158.5H720" />
-                <path class="chart-area" d="M0 158.5H720V170H0Z" fill="url(#chart-fill)" />
-                <path class="chart-zero-line" d="M0 158.5H720" />
-                <circle class="chart-dot" cx="0" cy="158.5" r="4"/><circle class="chart-dot" cx="120" cy="158.5" r="4"/><circle class="chart-dot" cx="240" cy="158.5" r="4"/><circle class="chart-dot" cx="360" cy="158.5" r="4"/><circle class="chart-dot" cx="480" cy="158.5" r="4"/><circle class="chart-dot" cx="600" cy="158.5" r="4"/><circle class="chart-dot" cx="720" cy="158.5" r="4"/>
-              </svg>
+            <p id="dashboard-week-range" class="form-description"></p>
+            <p id="dashboard-week-total" class="dashboard-week-total"></p>
+            <p id="dashboard-week-error" class="error-message" role="alert" hidden></p>
+            <div id="dashboard-week-content">
+              <div class="chart-wrap">
+                <div class="chart-y-labels" aria-hidden="true"><span></span><span></span><span></span><span>0</span></div>
+                <svg class="weekly-chart" viewBox="0 0 720 184" preserveAspectRatio="none" aria-hidden="true">
+                  <defs><linearGradient id="chart-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7599f8" stop-opacity=".17"/><stop offset="1" stop-color="#7599f8" stop-opacity="0"/></linearGradient></defs>
+                  <path class="chart-gridline" d="M8 14.5H712M8 62.5H712M8 110.5H712M8 158.5H712" />
+                  <path class="chart-area" fill="url(#chart-fill)" />
+                  <path class="chart-zero-line" />
+                  <g id="dashboard-week-points"></g>
+                </svg>
+              </div>
+              <div id="dashboard-week-days" class="dashboard-week-days" role="group" aria-label="Daily study time, Monday to Sunday"></div>
+              <p id="dashboard-week-detail" class="form-description" aria-live="polite"></p>
+              <div id="dashboard-week-empty" class="chart-empty-note"><span class="chart-note-dot"></span> Your weekly activity will take shape as you record study sessions.</div>
             </div>
-            <div class="chart-x-labels" aria-hidden="true"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
-            <div class="chart-empty-note"><span class="chart-note-dot"></span> Your weekly activity will take shape as you record study sessions.</div>
           </section>
 
           <footer class="page-footer"><span>Made for your next small step.</span><span>STUDY FLOW <span class="footer-separator">·</span> Keep your learning in flow</span></footer>
