@@ -12,7 +12,7 @@ if (dateLabel) {
 }
 
 function showView(view) {
-  const labels = { dashboard: "Dashboard", subjects: "Subjects", tasks: "Tasks & Exams" };
+  const labels = { dashboard: "Dashboard", subjects: "Subjects", tasks: "Tasks & Exams", records: "Study Records" };
   for (const name of Object.keys(labels)) document.querySelector(`#${name}-view`).hidden = view !== name;
   document.querySelector("#current-view-label").textContent = labels[view];
   document.title = `${labels[view]} · STUDY FLOW`;
@@ -24,6 +24,7 @@ function showView(view) {
   });
   Subjects.refresh();
   if (view === "tasks") Tasks.refresh();
+  if (view === "records") Records.refresh();
   if (view === "dashboard") refreshDashboardTasks();
 }
 

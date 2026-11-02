@@ -306,9 +306,9 @@ dialog::backdrop { background: rgb(25 40 70 / 35%); }
 .task-card time { display: block; margin-top: 16px; font-size: 12px; color: #64728a; }
 .task-subject { font-size: 11px; color: #64728a; margin: 8px 0 0; }
 .task-description { margin: 15px 0 0; font-size: 12px; line-height: 1.6; white-space: pre-wrap; }
-#task-form label { display: block; font-size: 12px; font-weight: 650; margin: 16px 0 7px; }
-#task-form input, #task-form select, #task-form textarea { display: block; width: 100%; min-width: 0; min-height: 42px; padding: 9px; border: 1px solid #ccd5e4; border-radius: 8px; background: white; color: var(--color-text); font: inherit; }
-#task-form textarea { resize: vertical; }
+:is(#task-form, #manual-record-form) label { display: block; font-size: 12px; font-weight: 650; margin: 16px 0 7px; }
+:is(#task-form, #manual-record-form) :is(input, select, textarea) { display: block; width: 100%; min-width: 0; min-height: 42px; padding: 9px; border: 1px solid #ccd5e4; border-radius: 8px; background: white; color: var(--color-text); font: inherit; }
+:is(#task-form, #manual-record-form) textarea { resize: vertical; }
 .optional-label { color: #788497; font-weight: 400; }
 .task-state { font-size: 12px; font-weight: 650; color: #576b94; margin: 12px 0 0; }
 .task-card.is-completed { background: #f6faf8; border-color: #dce9e2; }
@@ -322,3 +322,40 @@ dialog::backdrop { background: rgb(25 40 70 / 35%); }
 .deadline-item p { margin: 0; color: #788497; font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
 .deadline-item time { flex-shrink: 0; padding: 5px 7px; border-radius: 6px; background: var(--color-blue-soft); color: var(--color-blue-dark); font-size: 10px; font-weight: 650; }
 .upcoming-summary { margin: 9px 0 0; color: #788497; font-size: 10px; }
+.stopwatch-panel { max-width: 760px; padding: 28px; }
+.stopwatch-panel label { display: block; margin: 28px 0 8px; font-size: 12px; font-weight: 650; }
+#study-subject { width: 100%; min-width: 0; min-height: 44px; padding: 10px; border: 1px solid #ccd5e4; border-radius: 8px; background: white; color: var(--color-text); font: inherit; }
+#study-subject:disabled { background: #f3f5fa; opacity: 1; color: #64728a; }
+.stopwatch-panel .form-description { line-height: 1.6; margin: 10px 0 0; }
+.stopwatch-time { margin: 36px 0 8px; text-align: center; font-size: clamp(32px, 6vw, 64px); font-weight: 650; letter-spacing: .025em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.stopwatch-caption { color: #788497; font-size: 8px; text-align: center; letter-spacing: .1em; }
+.stopwatch-caption span { padding-inline: 9px; }
+.stopwatch-controls { display: flex; justify-content: center; gap: 12px; margin: 26px 0; }
+.stopwatch-controls .button { min-width: 110px; }
+.stopwatch-status { padding: 6px 9px; border-radius: 7px; background: #f0f3f8; color: #64728a; font-size: 11px; }
+.stopwatch-status[data-state="running"] { background: #edf6f0; color: #367455; }
+.stopwatch-status[data-state="paused"] { background: var(--color-amber-soft); color: #91661e; }
+.stopwatch-policy { max-width: 470px; margin: 0 auto; color: #64728a; font-size: 11px; line-height: 1.7; text-align: center; }
+.records-empty { max-width: 760px; margin-top: 20px; padding: 30px; }
+.records-empty p { margin: 12px auto 0; color: #788497; font-size: 12px; line-height: 1.6; }
+@media (max-width: 560px) {
+  .stopwatch-panel { padding: 20px 16px; }
+}
+
+.stopwatch-controls { flex-wrap: wrap; }
+.stopwatch-result { border-top: 1px solid var(--color-border); padding-top: 20px; text-align: center; }
+.stopwatch-result h3 { margin: 0 0 10px; font-size: 16px; }
+.stopwatch-result p { font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.stopwatch-status[data-state="stopped"] { background: var(--color-blue-soft); color: var(--color-blue-dark); }
+.records-list { list-style: none; padding: 0; margin: 0; }
+.records-list li { padding: 16px 0; border-bottom: 1px solid var(--color-border); }
+.records-list li:last-child { border-bottom: 0; }
+.records-list h3 { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.records-list p { margin: 8px 0 0; }
+
+.manual-duration { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.manual-duration > div { min-width: 0; }
+.records-list .record-note { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--color-text); }
+
+.record-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+@media (max-width: 400px) { .manual-duration { grid-template-columns: 1fr; gap: 0; } }

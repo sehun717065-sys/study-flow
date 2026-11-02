@@ -153,5 +153,91 @@ window.StudyStorage = (() => {
     return matches[0];
   }
 
-  return { setTaskCompleted, updateTask, deleteTask, getTasks: () => readTasks().tasks.map(task => ({ ...task, completed: task.completed ?? false })), addTask, getSubjects: () => read().subjects, addSubject, updateSubject, deleteSubject };
+  const recordKey = "study-flow.records.v1";
+
+  function validRecord(record) {
+    return record && typeof record.id === "string" && record.id.trim() &&
+      typeof record.subjectId === "string" && record.subjectId.trim() && validDate(record.date) &&
+      Number.isSafeInteger(record.durationSeconds) && record.durationSeconds > 0 &&
+      typeof record.note === "string" && ["stopwatch", "manual"].includes(record.source) &&
+      typeof record.createdAt === "string" && Number.isFinite(Date.parse(record.createdAt));
+  }
+
+  function readRecords() {
+    try {
+      const raw = localStorage.getItem(recordKey);
+      if (raw === null) return { version: 1, records: [] };
+      const data = JSON.parse(raw);
+      if (data.version !== 1 || !Array.isArray(data.records) || !data.records.every(validRecord) ||
+          new Set(data.records.map(record => record.id)).size !== data.records.length) {
+        throw new Error("Invalid record data");
+      }
+      return data;
+    } catch {
+      throw new Error("Saved study records could not be loaded. Existing data has been preserved.");
+    }
+  }
+
+  function addRecord(record) {
+    if (!validRecord(record)) throw new Error("A valid subject and at least one full second are required.");
+    const data = readRecords();
+    const existing = data.records.find(item => item.id === record.id);
+    if (existing) {
+      if (Object.keys(record).every(field => record[field] === existing[field])) return existing;
+      throw new Error("This record ID already exists. Your measurement has been preserved.");
+    }
+    data.records.push({ ...record });
+    save(data, recordKey);
+    return record;
+  }
+
+  function localDate(date = new Date()) {
+    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+  }
+
+  function validateRecordFields({ subjectId, date, hours, minutes, seconds = "0", note }, previousSubjectId = null) {
+    if (!subjectId || (subjectId !== previousSubjectId && !read().subjects.some(subject => subject.id === subjectId))) {
+      throw new Error("Choose an available subject.");
+    }
+    if (!validDate(date)) throw new Error("Choose a valid study date.");
+    if (date > localDate()) throw new Error("Study dates cannot be in the future.");
+    if (![hours, minutes, seconds].every(value => typeof value === "string" && /^\d+$/.test(value))) {
+      throw new Error("Enter whole numbers for hours, minutes and seconds, with no signs or decimals.");
+    }
+    const [h, m, s] = [hours, minutes, seconds].map(Number);
+    if (![h, m, s].every(Number.isSafeInteger) || m > 59 || s > 59) {
+      throw new Error("Enter valid whole hours, with minutes and seconds between 0 and 59.");
+    }
+    const durationSeconds = h * 3600 + m * 60 + s;
+    if (!Number.isSafeInteger(durationSeconds) || durationSeconds <= 0) {
+      throw new Error("Enter a study duration greater than zero and within the supported numeric range.");
+    }
+    if (typeof note !== "string" || note.length > 2000) throw new Error("Keep your note within 2000 characters.");
+    return { subjectId, date, durationSeconds, note };
+  }
+
+  function addManualRecord(values) {
+    const fields = validateRecordFields(values);
+    return addRecord({ id: values.id, ...fields, note: fields.note.trim(), source: "manual", createdAt: new Date().toISOString() });
+  }
+
+  function updateRecord(id, values) {
+    const data = readRecords();
+    const record = data.records.find(item => item.id === id);
+    if (!record) throw new Error("This study record is no longer available. Reload and try again.");
+    Object.assign(record, validateRecordFields(values, record.subjectId));
+    save(data, recordKey);
+    return record;
+  }
+
+  function deleteRecord(id) {
+    const data = readRecords();
+    const record = data.records.find(item => item.id === id);
+    if (!record) throw new Error("This study record is no longer available. Reload and try again.");
+    data.records = data.records.filter(item => item.id !== id);
+    save(data, recordKey);
+    return record;
+  }
+
+  return { updateRecord, deleteRecord, localDate, addManualRecord, getRecords: () => readRecords().records, addRecord, setTaskCompleted, updateTask, deleteTask, getTasks: () => readTasks().tasks.map(task => ({ ...task, completed: task.completed ?? false })), addTask, getSubjects: () => read().subjects, addSubject, updateSubject, deleteSubject };
 })();

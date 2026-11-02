@@ -1,0 +1,352 @@
+window.Records = (() => {
+  const select = document.querySelector("#study-subject");
+  const error = document.querySelector("#stopwatch-error");
+  const note = document.querySelector("#stopwatch-subject-note");
+  const display = document.querySelector("#stopwatch-time");
+  const status = document.querySelector("#stopwatch-status");
+  const startButton = document.querySelector("#stopwatch-start");
+  const pauseButton = document.querySelector("#stopwatch-pause");
+  const resumeButton = document.querySelector("#stopwatch-resume");
+  const stopButton = document.querySelector("#stopwatch-stop");
+  const result = document.querySelector("#stopwatch-result");
+  const saveButton = document.querySelector("#save-record");
+  const discardDialog = document.querySelector("#discard-record-dialog");
+  let pendingRecord = null;
+  let saving = false;
+  let state = "idle";
+  let accumulatedMs = 0;
+  let startedAt = null;
+  let displayTimer = null;
+  let sessionSubject = null;
+
+  function elapsedMs() {
+    return accumulatedMs + (state === "running" ? performance.now() - startedAt : 0);
+  }
+
+  function render() {
+    display.textContent = formatTime(Math.floor(elapsedMs() / 1000));
+    const label = { idle: "Not started", running: "Running", paused: "Paused", stopped: "Awaiting save" }[state];
+    if (status.textContent !== label) status.textContent = label;
+    status.dataset.state = state;
+    startButton.hidden = startButton.disabled = state !== "idle";
+    pauseButton.hidden = pauseButton.disabled = state !== "running";
+    resumeButton.hidden = resumeButton.disabled = state !== "paused";
+    stopButton.hidden = stopButton.disabled = !["running", "paused"].includes(state);
+    result.hidden = state !== "stopped";
+    saveButton.disabled = saving || !pendingRecord || pendingRecord.durationSeconds < 1;
+    select.disabled = state !== "idle";
+  }
+
+  function formatTime(seconds) {
+    return [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60]
+      .map(value => String(value).padStart(2, "0")).join(":");
+  }
+
+  // This interval only repaints; elapsed time never depends on callback counts.
+  function startDisplayUpdates() {
+    if (displayTimer === null) displayTimer = setInterval(render, 200);
+  }
+
+  function refresh() {
+    if (state === "idle") {
+      const selected = select.value;
+      select.replaceChildren(new Option("Choose a subject", ""));
+      try {
+        const subjects = StudyStorage.getSubjects();
+        subjects.forEach(subject => select.add(new Option(subject.name, subject.id)));
+        select.value = subjects.some(subject => subject.id === selected) ? selected : "";
+        note.textContent = subjects.length ? "Choose a subject. The selection stays locked until you save or discard the session." :
+          "No subjects yet. Add a subject in Subjects before starting a session.";
+      } catch (problem) {
+        note.textContent = problem.message;
+      }
+    }
+    render();
+    renderHistory();
+  }
+
+  function start() {
+    if (state !== "idle") return;
+    try {
+      const subject = StudyStorage.getSubjects().find(subject => subject.id === select.value);
+      if (!subject) throw new Error("Please choose a subject before starting.");
+      sessionSubject = { id: subject.id, name: subject.name };
+      error.hidden = true;
+      accumulatedMs = 0;
+      startedAt = performance.now();
+      state = "running";
+      startDisplayUpdates();
+      render();
+      pauseButton.focus();
+    } catch (problem) {
+      error.textContent = problem.message;
+      error.hidden = false;
+      select.focus();
+    }
+  }
+
+  function pause() {
+    if (state !== "running") return;
+    accumulatedMs = elapsedMs();
+    startedAt = null;
+    state = "paused";
+    clearInterval(displayTimer);
+    displayTimer = null;
+    render();
+    resumeButton.focus();
+  }
+
+  function resume() {
+    if (state !== "paused") return;
+    startedAt = performance.now();
+    state = "running";
+    startDisplayUpdates();
+    render();
+    pauseButton.focus();
+  }
+
+  function stop() {
+    if (!["running", "paused"].includes(state)) return;
+    accumulatedMs = elapsedMs();
+    startedAt = null;
+    state = "stopped";
+    clearInterval(displayTimer);
+    displayTimer = null;
+    const now = new Date();
+    pendingRecord = {
+      id: newRecordId(),
+      subjectId: sessionSubject.id,
+      date: StudyStorage.localDate(now),
+      durationSeconds: Math.floor(accumulatedMs / 1000),
+      note: "", source: "stopwatch", createdAt: now.toISOString(),
+    };
+    document.querySelector("#result-description").textContent = `${sessionSubject.name} · ${formatTime(pendingRecord.durationSeconds)}`;
+    error.hidden = pendingRecord.durationSeconds > 0;
+    if (!error.hidden) error.textContent = "This session is shorter than one second and cannot be saved. Discard it to start again.";
+    render();
+    (saveButton.disabled ? document.querySelector("#discard-record") : saveButton).focus();
+  }
+
+  function reset() {
+    state = "idle";
+    accumulatedMs = 0;
+    startedAt = null;
+    sessionSubject = pendingRecord = null;
+    error.hidden = true;
+    refresh();
+    startButton.focus();
+  }
+
+  function saveRecord() {
+    if (state !== "stopped" || saving || !pendingRecord || pendingRecord.durationSeconds < 1) return;
+    saving = true;
+    saveButton.disabled = true;
+    try {
+      StudyStorage.addRecord(pendingRecord);
+    } catch (problem) {
+      error.textContent = problem.message;
+      error.hidden = false;
+      saving = false;
+      render();
+      return;
+    }
+    saving = false;
+    reset();
+  }
+
+  function renderHistory() {
+    const list = document.querySelector("#records-list");
+    const listError = document.querySelector("#records-error");
+    const empty = document.querySelector("#records-empty");
+    listError.hidden = true;
+    try {
+      const records = StudyStorage.getRecords().slice().sort((a, b) =>
+        b.date.localeCompare(a.date) || Date.parse(b.createdAt) - Date.parse(a.createdAt));
+      let subjects = [];
+      try { subjects = StudyStorage.getSubjects(); }
+      catch (problem) { listError.textContent = problem.message; listError.hidden = false; }
+      const names = new Map(subjects.map(subject => [subject.id, subject.name]));
+      const items = records.map(record => {
+        const item = document.createElement("li");
+        const heading = document.createElement("h3");
+        heading.textContent = names.get(record.subjectId) || "미지정 과목";
+        const details = document.createElement("p");
+        const date = document.createElement("time");
+        date.dateTime = date.textContent = record.date;
+        details.append(date, ` · ${formatTime(record.durationSeconds)} · ${record.source === "manual" ? "Manual" : "Stopwatch"}`);
+        item.append(heading, details);
+        if (record.note) {
+          const memo = document.createElement("p");
+          memo.className = "record-note";
+          memo.textContent = record.note;
+          item.append(memo);
+        }
+        const actions = document.createElement("div");
+        actions.className = "record-actions";
+        for (const [action, label] of [["edit", "Edit"], ["delete", "Delete"]]) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `button ${action === "delete" ? "button-danger" : "button-secondary"}`;
+          button.textContent = label;
+          button.dataset.recordAction = action;
+          button.dataset.recordId = record.id;
+          button.setAttribute("aria-label", `${label} ${heading.textContent} record on ${record.date}`);
+          actions.append(button);
+        }
+        item.append(actions);
+        return item;
+      });
+      list.replaceChildren(...items);
+      empty.hidden = records.length > 0;
+    } catch (problem) {
+      listError.textContent = problem.message;
+      listError.hidden = false;
+      empty.hidden = true;
+    }
+  }
+
+  function newRecordId() {
+    return typeof crypto.randomUUID === "function" ? crypto.randomUUID() :
+      Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  const manualDialog = document.querySelector("#manual-record-dialog");
+  const manualForm = document.querySelector("#manual-record-form");
+  const manualError = document.querySelector("#manual-record-error");
+  const manualSubject = document.querySelector("#manual-subject");
+  const manualSave = document.querySelector("#save-manual-record");
+  let manualId = null;
+  let editingId = null;
+  let manualSaving = false;
+
+  function openRecordForm(record = null) {
+    editingId = record ? record.id : null;
+    manualForm.reset();
+    manualError.hidden = true;
+    manualSave.disabled = false;
+    manualSave.textContent = record ? "Save Changes" : "Save Record";
+    document.querySelector("#manual-record-title").textContent = record ? "Edit Study Record" : "Add Manual Record";
+    manualId = record ? record.id : newRecordId();
+    manualSubject.replaceChildren(new Option("Choose a subject", ""));
+    const date = document.querySelector("#manual-date");
+    date.max = StudyStorage.localDate();
+    date.value = record ? record.date : date.max;
+    const subjectNotice = document.querySelector("#manual-subject-note");
+    subjectNotice.hidden = true;
+    try {
+      const subjects = StudyStorage.getSubjects();
+      subjects.forEach(subject => manualSubject.add(new Option(subject.name, subject.id)));
+      if (record && !subjects.some(subject => subject.id === record.subjectId)) {
+        manualSubject.add(new Option("미지정 과목 (keep existing link)", record.subjectId));
+        subjectNotice.textContent = "This subject no longer exists. Keep the existing link or choose another subject.";
+        subjectNotice.hidden = false;
+      } else if (!subjects.length) {
+        subjectNotice.textContent = "No subjects yet. Add a subject in Subjects before saving a record.";
+        subjectNotice.hidden = false;
+      }
+    } catch (problem) {
+      manualError.textContent = problem.message;
+      manualError.hidden = false;
+      if (record) manualSubject.add(new Option("미지정 과목 (keep existing link)", record.subjectId));
+    }
+    if (record) {
+      manualSubject.value = record.subjectId;
+      document.querySelector("#manual-hours").value = Math.floor(record.durationSeconds / 3600);
+      document.querySelector("#manual-minutes").value = Math.floor(record.durationSeconds / 60) % 60;
+      document.querySelector("#manual-seconds").value = record.durationSeconds % 60;
+      document.querySelector("#manual-note").value = record.note;
+    }
+    manualDialog.showModal();
+    manualSubject.focus();
+  }
+  document.querySelector("#add-manual-record").addEventListener("click", () => openRecordForm());
+  document.querySelector("#cancel-manual-record").addEventListener("click", () => manualDialog.close());
+  manualForm.addEventListener("submit", event => {
+    event.preventDefault();
+    if (!manualDialog.open || manualSaving) return;
+    manualSaving = true;
+    manualSave.disabled = true;
+    try {
+      const values = {
+        id: manualId, subjectId: manualSubject.value, date: document.querySelector("#manual-date").value,
+        hours: document.querySelector("#manual-hours").value, minutes: document.querySelector("#manual-minutes").value,
+        seconds: document.querySelector("#manual-seconds").value,
+        note: document.querySelector("#manual-note").value,
+      };
+      if (editingId) StudyStorage.updateRecord(editingId, values);
+      else StudyStorage.addManualRecord(values);
+      manualDialog.close();
+      renderHistory();
+    } catch (problem) {
+      manualError.textContent = problem.message;
+      manualError.hidden = false;
+      manualError.focus();
+    } finally {
+      manualSaving = false;
+      manualSave.disabled = false;
+    }
+  });
+
+  const deleteDialog = document.querySelector("#delete-record-dialog");
+  const deleteError = document.querySelector("#delete-record-error");
+  let deletingId = null;
+  document.querySelector("#records-list").addEventListener("click", event => {
+    const button = event.target.closest("[data-record-action]");
+    if (!button) return;
+    try {
+      const record = StudyStorage.getRecords().find(item => item.id === button.dataset.recordId);
+      if (!record) throw new Error("This study record is no longer available. Reload and try again.");
+      if (button.dataset.recordAction === "edit") openRecordForm(record);
+      else {
+        deletingId = record.id;
+        deleteError.hidden = true;
+        document.querySelector("#delete-record-description").textContent = `${record.date} · ${formatTime(record.durationSeconds)} · ${record.source === "manual" ? "Manual" : "Stopwatch"}. This cannot be undone.`;
+        deleteDialog.showModal();
+        document.querySelector("#cancel-delete-record").focus();
+      }
+    } catch (problem) {
+      const listError = document.querySelector("#records-error");
+      listError.textContent = problem.message;
+      listError.hidden = false;
+    }
+  });
+  document.querySelector("#cancel-delete-record").addEventListener("click", () => deleteDialog.close());
+  document.querySelector("#confirm-delete-record").addEventListener("click", () => {
+    if (!deleteDialog.open || !deletingId) return;
+    try {
+      StudyStorage.deleteRecord(deletingId);
+      deletingId = null;
+      deleteDialog.close();
+      renderHistory();
+    } catch (problem) {
+      deleteError.textContent = problem.message;
+      deleteError.hidden = false;
+    }
+  });
+
+  stopButton.addEventListener("click", stop);
+  saveButton.addEventListener("click", saveRecord);
+  document.querySelector("#discard-record").addEventListener("click", () => {
+    if (state === "stopped") discardDialog.showModal();
+  });
+  document.querySelector("#cancel-discard-record").addEventListener("click", () => discardDialog.close());
+  document.querySelector("#confirm-discard-record").addEventListener("click", () => {
+    if (state !== "stopped") return;
+    discardDialog.close();
+    reset();
+  });
+  window.addEventListener("beforeunload", event => {
+    if (state === "idle") return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+
+  startButton.addEventListener("click", start);
+  pauseButton.addEventListener("click", pause);
+  resumeButton.addEventListener("click", resume);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) render();
+  });
+  // Expose a copy for future session integrations without allowing state changes.
+  return { refresh, getSnapshot: () => ({ state, elapsedMs: elapsedMs(), subject: sessionSubject ? { ...sessionSubject } : null }) };
+})();

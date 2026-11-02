@@ -10,6 +10,7 @@
     <script src="js/storage.js" defer></script>
     <script src="js/subjects.js" defer></script>
     <script src="js/tasks.js" defer></script>
+    <script src="js/records.js" defer></script>
     <script src="js/app.js" defer></script>
   </head>
   <body>
@@ -40,10 +41,10 @@
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" stroke="currentColor" stroke-width="1.7"/><path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17M8 13h3m-3 3h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
               <span>Tasks &amp; Exams</span>
             </button></li>
-            <li class="nav-item" aria-disabled="true">
+            <li><button type="button" class="nav-item" data-view="records" aria-label="Study Records">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3.4 2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <span>Study Records</span>
-            </li>
+            </button></li>
             <li class="nav-item" aria-disabled="true">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19.5V12m5.3 7.5V5m5.4 14.5v-10m5.3 10V8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               <span>Analytics</span>
@@ -191,6 +192,47 @@
           <p id="delete-task-description" class="form-description"></p>
           <p id="delete-task-error" class="error-message" role="alert" hidden></p>
           <div class="form-actions"><button id="cancel-delete-task" class="button button-secondary" type="button" autofocus>Cancel</button><button id="confirm-delete-task" class="button button-danger" type="button">Delete</button></div>
+        </dialog>
+        <section class="dashboard-content" id="records-view" aria-labelledby="records-title" hidden>
+          <header class="subjects-header"><div><p class="eyebrow">ONE SESSION AT A TIME</p><h1 id="records-title">Study Records</h1><p class="welcome-subtitle">Make space for a little focused learning.</p></div><button id="add-manual-record" class="button button-primary" type="button">Add Manual Record</button></header>
+          <section class="panel stopwatch-panel" aria-labelledby="stopwatch-title">
+            <div class="panel-heading"><h2 id="stopwatch-title">Study stopwatch</h2><span id="stopwatch-status" class="stopwatch-status" role="status">Not started</span></div>
+            <label for="study-subject">Study subject</label>
+            <select id="study-subject" aria-describedby="stopwatch-subject-note stopwatch-error"><option value="">Choose a subject</option></select>
+            <p id="stopwatch-subject-note" class="form-description">Add a subject in Subjects before starting a session.</p>
+            <p id="stopwatch-error" class="error-message" role="alert" hidden></p>
+            <div id="stopwatch-time" class="stopwatch-time" role="timer" aria-label="Elapsed study time" aria-live="off">00:00:00</div>
+            <p class="stopwatch-caption">HOURS <span>:</span> MINUTES <span>:</span> SECONDS</p>
+            <div class="stopwatch-controls"><button id="stopwatch-start" class="button button-primary" type="button">Start</button><button id="stopwatch-pause" class="button button-secondary" type="button" hidden disabled>Pause</button><button id="stopwatch-resume" class="button button-primary" type="button" hidden disabled>Resume</button><button id="stopwatch-stop" class="button button-secondary" type="button" hidden disabled>Stop</button></div>
+            <section id="stopwatch-result" class="stopwatch-result" aria-labelledby="result-title" hidden>
+              <h3 id="result-title">Session complete</h3><p id="result-description"></p>
+              <p>Only full seconds are saved; fractions of a second are discarded.</p>
+              <div class="stopwatch-controls"><button id="save-record" class="button button-primary" type="button">Save Record</button><button id="discard-record" class="button button-danger" type="button">Discard</button></div>
+            </section>
+            <p class="stopwatch-policy">Unsaved time is lost if you reload or close this tab. Stop and save your record first. Switching sections keeps your session active.</p>
+          </section>
+          <section class="panel records-empty" aria-labelledby="records-list-title"><h2 id="records-list-title">Study history</h2><p id="records-error" class="error-message" role="alert" hidden></p><p id="records-empty">No study records yet. Save a stopwatch session or add a manual record.</p><ul id="records-list" class="records-list"></ul></section>
+        </section>
+        <dialog id="manual-record-dialog" aria-labelledby="manual-record-title">
+          <form id="manual-record-form" novalidate>
+            <p class="panel-kicker">YOUR STUDY TIME</p><h2 id="manual-record-title">Add Manual Record</h2>
+            <label for="manual-subject">Subject *</label><select id="manual-subject" required aria-describedby="manual-record-error"><option value="">Choose a subject</option></select>
+            <p id="manual-subject-note" class="form-description" hidden>No subjects yet. Add a subject in Subjects before saving a record.</p>
+            <label for="manual-date">Date *</label><input id="manual-date" type="date" min="0001-01-01" required aria-describedby="manual-record-error">
+            <div class="manual-duration"><div><label for="manual-hours">Hours *</label><input id="manual-hours" type="text" inputmode="numeric" pattern="[0-9]+" value="0" required aria-describedby="manual-record-error"></div><div><label for="manual-minutes">Minutes (0–59) *</label><input id="manual-minutes" type="text" inputmode="numeric" pattern="[0-9]+" value="0" required aria-describedby="manual-record-error"></div><div><label for="manual-seconds">Seconds (0–59) *</label><input id="manual-seconds" type="text" inputmode="numeric" pattern="[0-9]+" value="0" required aria-describedby="manual-record-error"></div></div>
+            <label for="manual-note">Study note <span class="optional-label">(optional)</span></label><textarea id="manual-note" rows="3" maxlength="2000"></textarea>
+            <p id="manual-record-error" class="error-message" role="alert" tabindex="-1" hidden></p>
+            <div class="form-actions"><button id="cancel-manual-record" class="button button-secondary" type="button">Cancel</button><button id="save-manual-record" class="button button-primary" type="submit">Save Record</button></div>
+          </form>
+        </dialog>
+        <dialog id="delete-record-dialog" aria-labelledby="delete-record-title" aria-describedby="delete-record-description">
+          <h2 id="delete-record-title">Delete study record?</h2><p id="delete-record-description" class="form-description"></p>
+          <p id="delete-record-error" class="error-message" role="alert" hidden></p>
+          <div class="form-actions"><button id="cancel-delete-record" class="button button-secondary" type="button" autofocus>Cancel</button><button id="confirm-delete-record" class="button button-danger" type="button">Delete</button></div>
+        </dialog>
+        <dialog id="discard-record-dialog" aria-labelledby="discard-record-title" aria-describedby="discard-record-description">
+          <h2 id="discard-record-title">Discard this session?</h2><p id="discard-record-description" class="form-description">Your measured time will not be saved. This cannot be undone.</p>
+          <div class="form-actions"><button id="cancel-discard-record" class="button button-secondary" type="button" autofocus>Cancel</button><button id="confirm-discard-record" class="button button-danger" type="button">Discard</button></div>
         </dialog>
       </main>
     </div>
