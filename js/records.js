@@ -310,22 +310,43 @@ window.Records = (() => {
     const list = document.querySelector("#records-list");
     const listError = document.querySelector("#records-error");
     const empty = document.querySelector("#records-empty");
+    const filter = document.querySelector("#records-subject-filter");
+    const filterStatus = document.querySelector("#records-filter-status");
     listError.hidden = true;
+    list.replaceChildren();
+    empty.hidden = true;
+    filterStatus.textContent = "";
     try {
       const savedRecords = StudyStorage.getRecords();
       renderTotal(savedRecords);
       renderPeriods(savedRecords);
       renderActivity(savedRecords);
-      const records = StudyStats.sortRecordsByDate(savedRecords);
+      const sortedRecords = StudyStats.sortRecordsByDate(savedRecords);
       let subjects = [];
       try {
         subjects = StudyStorage.getSubjects();
         renderBreakdown(savedRecords, subjects);
       } catch (problem) {
-        listError.textContent = problem.message;
+        listError.textContent = `Subject data unavailable. ${problem.message}`;
         listError.hidden = false;
+        filter.disabled = true;
         showBreakdownError(problem);
+        return;
       }
+      const selected = filter.value;
+      const subjectIds = new Set(subjects.map(subject => subject.id));
+      const hasUnassigned = savedRecords.some(record => !subjectIds.has(record.subjectId));
+      filter.replaceChildren(new Option("All Subjects", ""));
+      for (const subject of subjects) filter.add(new Option(subject.name, `subject:${subject.id}`));
+      if (hasUnassigned) filter.add(new Option("미지정 과목", "unassigned"));
+      filter.value = [...filter.options].some(option => option.value === selected) ? selected : "";
+      filter.disabled = false;
+      const records = sortedRecords.filter(record => !filter.value ||
+        (filter.value === "unassigned" ? !subjectIds.has(record.subjectId) : `subject:${record.subjectId}` === filter.value));
+      filterStatus.textContent = `Showing ${records.length} of ${savedRecords.length} saved records.`;
+      empty.textContent = !savedRecords.length ? "No study records yet. Save a stopwatch session or add a manual record." :
+        filter.value === "unassigned" ? "No saved records for 미지정 과목." :
+        `No saved records for ${filter.selectedOptions[0].textContent}. Choose All Subjects to see other records.`;
       const names = new Map(subjects.map(subject => [subject.id, subject.name]));
       const items = records.map(record => {
         const item = document.createElement("li");
@@ -360,14 +381,17 @@ window.Records = (() => {
       list.replaceChildren(...items);
       empty.hidden = records.length > 0;
     } catch (problem) {
-      listError.textContent = problem.message;
+      listError.textContent = `Study records unavailable. ${problem.message}`;
       listError.hidden = false;
+      filter.disabled = true;
       empty.hidden = true;
       showTotalError(problem);
       showBreakdownError(problem);
       showActivityError(problem);
     }
   }
+
+  document.querySelector("#records-subject-filter").addEventListener("change", renderHistory);
 
   function newRecordId() {
     return typeof crypto.randomUUID === "function" ? crypto.randomUUID() :

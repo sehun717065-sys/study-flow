@@ -254,7 +254,7 @@
             </section>
             <p class="stopwatch-policy">Unsaved time is lost if you reload or close this tab. Stop and save your record first. Switching sections keeps your session active.</p>
           </section>
-          <section class="panel records-empty" aria-labelledby="records-list-title"><h2 id="records-list-title">Study history</h2><p id="records-error" class="error-message" role="alert" hidden></p><p id="records-empty">No study records yet. Save a stopwatch session or add a manual record.</p><ul id="records-list" class="records-list"></ul></section>
+          <section class="panel records-empty" aria-labelledby="records-list-title"><h2 id="records-list-title">Study history</h2><div class="records-filter"><label for="records-subject-filter">Filter study history by subject</label><select id="records-subject-filter" aria-describedby="records-filter-status records-error"><option value="">All Subjects</option></select></div><p id="records-filter-status" class="form-description" role="status"></p><p id="records-error" class="error-message" role="alert" hidden></p><p id="records-empty">No study records yet. Save a stopwatch session or add a manual record.</p><ul id="records-list" class="records-list"></ul></section>
         </section>
         <dialog id="manual-record-dialog" aria-labelledby="manual-record-title">
           <form id="manual-record-form" novalidate>
