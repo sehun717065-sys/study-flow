@@ -10,6 +10,7 @@
     <script src="js/storage.js" defer></script>
     <script src="js/subjects.js" defer></script>
     <script src="js/tasks.js" defer></script>
+    <script src="js/analytics.js" defer></script>
     <script src="js/records.js" defer></script>
     <script src="js/app.js" defer></script>
   </head>
@@ -195,6 +196,37 @@
         </dialog>
         <section class="dashboard-content" id="records-view" aria-labelledby="records-title" hidden>
           <header class="subjects-header"><div><p class="eyebrow">ONE SESSION AT A TIME</p><h1 id="records-title">Study Records</h1><p class="welcome-subtitle">Make space for a little focused learning.</p></div><button id="add-manual-record" class="button button-primary" type="button">Add Manual Record</button></header>
+          <section class="panel study-total" aria-labelledby="study-total-title">
+            <p class="eyebrow" id="study-total-title">TOTAL STUDY TIME</p>
+            <p id="study-total-value" class="study-total-value" aria-live="polite">—</p>
+            <p id="study-total-detail" class="form-description">Saved study records only.</p>
+            <label for="stats-date" class="stats-date-label">Statistics date</label>
+            <input id="stats-date" type="date" min="0001-01-01" max="9999-12-31" required aria-describedby="study-period-error">
+            <div class="period-stats">
+              <section aria-labelledby="daily-study-title"><h3 id="daily-study-title">Daily Study Time</h3><p id="daily-study-value" class="period-value" aria-live="polite">—</p><p id="daily-study-range" class="period-range"></p></section>
+              <section aria-labelledby="weekly-study-title"><h3 id="weekly-study-title">Weekly Study Time</h3><p id="weekly-study-value" class="period-value" aria-live="polite">—</p><p id="weekly-study-range" class="period-range"></p></section>
+              <section aria-labelledby="monthly-study-title"><h3 id="monthly-study-title">Monthly Study Time</h3><p id="monthly-study-value" class="period-value" aria-live="polite">—</p><p id="monthly-study-range" class="period-range"></p></section>
+            </div>
+            <p id="study-period-error" class="error-message" role="alert" hidden></p>
+            <p id="study-total-error" class="error-message" role="alert" hidden></p>
+          </section>
+          <section class="panel study-total weekly-activity" aria-labelledby="weekly-activity-title">
+            <h2 id="weekly-activity-title">Weekly Study Activity</h2>
+            <p id="weekly-activity-range" class="form-description"></p>
+            <p class="form-description">Hover, focus or tap a day to see its exact saved study time.</p>
+            <p id="weekly-activity-error" class="error-message" role="alert" hidden></p>
+            <p id="weekly-activity-empty" class="form-description" hidden>No saved study time this week.</p>
+            <div id="weekly-activity-chart" class="activity-chart" role="group" aria-label="Monday to Sunday study activity"></div>
+            <p id="weekly-activity-detail" class="activity-detail" role="status"></p>
+          </section>
+          <section class="panel study-total subject-breakdown" aria-labelledby="subject-breakdown-title">
+            <h2 id="subject-breakdown-title">Subject Breakdown</h2>
+            <p class="form-description">All-time saved study records · Independent of the statistics date</p>
+            <p id="subject-breakdown-empty" class="form-description" hidden></p>
+            <p id="subject-breakdown-error" class="error-message" role="alert" hidden></p>
+            <ul id="subject-breakdown-list" class="breakdown-list" aria-label="All-time study time by subject"></ul>
+            <p id="subject-breakdown-rounding" class="form-description" hidden>Percentages are rounded to one decimal place and may not add up to 100%.</p>
+          </section>
           <section class="panel stopwatch-panel" aria-labelledby="stopwatch-title">
             <div class="panel-heading"><h2 id="stopwatch-title">Study stopwatch</h2><span id="stopwatch-status" class="stopwatch-status" role="status">Not started</span></div>
             <label for="study-subject">Study subject</label>

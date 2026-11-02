@@ -154,17 +154,180 @@ window.Records = (() => {
     reset();
   }
 
+  const statsDate = document.querySelector("#stats-date");
+  statsDate.value = StudyStorage.localDate();
+  statsDate.addEventListener("change", () => renderHistory());
+
+  function studyTimeLabel(seconds) {
+    return seconds > 0 && seconds < 60 ? `1분 미만 (${seconds}초)` :
+      `${Math.floor(seconds / 3600)}시간 ${Math.floor(seconds / 60) % 60}분`;
+  }
+
+  function showPeriodError(problem) {
+    for (const period of ["daily", "weekly", "monthly"]) {
+      document.querySelector(`#${period}-study-value`).textContent = "계산할 수 없음";
+      document.querySelector(`#${period}-study-range`).textContent = "";
+    }
+    const error = document.querySelector("#study-period-error");
+    error.textContent = problem.message;
+    error.hidden = false;
+  }
+
+  function renderPeriods(records) {
+    try {
+      const stats = StudyStats.summarize(records, statsDate.value);
+      for (const period of ["daily", "weekly", "monthly"]) {
+        document.querySelector(`#${period}-study-value`).textContent = studyTimeLabel(stats[period]);
+        const [start, end] = stats.ranges[period];
+        document.querySelector(`#${period}-study-range`).textContent = start === end ? start : `${start} – ${end}`;
+      }
+      document.querySelector("#study-period-error").hidden = true;
+    } catch (problem) { showPeriodError(problem); }
+  }
+
+  function showTotalError(problem) {
+    document.querySelector("#study-total-value").textContent = "계산할 수 없음";
+    document.querySelector("#study-total-detail").hidden = true;
+    const totalError = document.querySelector("#study-total-error");
+    totalError.textContent = problem.message;
+    totalError.hidden = false;
+    showPeriodError(problem);
+  }
+
+  function renderTotal(records) {
+    try {
+      const total = StudyStats.totalSeconds(records);
+      document.querySelector("#study-total-value").textContent = studyTimeLabel(total);
+      const detail = document.querySelector("#study-total-detail");
+      detail.textContent = `${total.toLocaleString()}초 · 저장된 기록만 포함`;
+      detail.hidden = false;
+      document.querySelector("#study-total-error").hidden = true;
+    } catch (problem) {
+      showTotalError(problem);
+    }
+  }
+
+  function showActivityError(problem) {
+    document.querySelector("#weekly-activity-chart").replaceChildren();
+    document.querySelector("#weekly-activity-range").textContent = "";
+    document.querySelector("#weekly-activity-detail").textContent = "";
+    document.querySelector("#weekly-activity-empty").hidden = true;
+    const error = document.querySelector("#weekly-activity-error");
+    error.textContent = problem.message;
+    error.hidden = false;
+  }
+
+  function renderActivity(records) {
+    try {
+      const activity = StudyStats.weeklyActivity(records, statsDate.value);
+      const max = Math.max(0, ...activity.days.map(day => day.seconds));
+      const chart = document.querySelector("#weekly-activity-chart");
+      const buttons = activity.days.map(day => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "activity-day";
+        button.dataset.date = day.date;
+        button.dataset.seconds = day.seconds;
+        const label = `${day.weekday} · ${day.date} · ${formatTime(day.seconds)} (${day.seconds.toLocaleString()}초)`;
+        button.setAttribute("aria-label", label);
+        button.title = label;
+        const plot = document.createElement("span");
+        plot.className = "activity-plot";
+        plot.setAttribute("aria-hidden", "true");
+        const bar = document.createElement("span");
+        bar.className = `activity-bar${day.seconds > 0 ? " has-time" : ""}`;
+        bar.style.height = `${max === 0 ? 0 : day.seconds / max * 100}%`;
+        plot.append(bar);
+        const weekday = document.createElement("span");
+        weekday.textContent = day.weekday;
+        const date = document.createElement("span");
+        date.className = "activity-date";
+        date.textContent = day.date.split("-").slice(1).join("-");
+        button.append(plot, weekday, date);
+        const selectDay = () => {
+          chart.querySelectorAll("button").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+          document.querySelector("#weekly-activity-detail").textContent = label;
+        };
+        button.addEventListener("mouseenter", selectDay);
+        button.addEventListener("focus", selectDay);
+        button.addEventListener("click", selectDay);
+        return button;
+      });
+      chart.replaceChildren(...buttons);
+      document.querySelector("#weekly-activity-range").textContent = `${activity.start} – ${activity.end} · Total ${formatTime(activity.total)}`;
+      document.querySelector("#weekly-activity-empty").hidden = activity.total !== 0;
+      document.querySelector("#weekly-activity-error").hidden = true;
+      const selected = buttons.find(button => button.dataset.date === statsDate.value) || buttons[0];
+      selected.click();
+    } catch (problem) { showActivityError(problem); }
+  }
+
+  function showBreakdownError(problem) {
+    document.querySelector("#subject-breakdown-list").replaceChildren();
+    document.querySelector("#subject-breakdown-empty").hidden = true;
+    document.querySelector("#subject-breakdown-rounding").hidden = true;
+    const error = document.querySelector("#subject-breakdown-error");
+    error.textContent = problem.message;
+    error.hidden = false;
+  }
+
+  function renderBreakdown(records, subjects) {
+    try {
+      const { total, rows } = StudyStats.subjectBreakdown(records, subjects);
+      const items = rows.map(row => {
+        const item = document.createElement("li");
+        item.dataset.subjectId = row.subjectId ?? "";
+        const heading = document.createElement("div");
+        heading.className = "breakdown-heading";
+        const title = document.createElement("h3");
+        const swatch = document.createElement("span");
+        swatch.className = "breakdown-swatch";
+        swatch.style.backgroundColor = row.color;
+        swatch.setAttribute("aria-hidden", "true");
+        title.append(swatch, document.createTextNode(row.name));
+        const value = document.createElement("p");
+        value.textContent = `${studyTimeLabel(row.seconds)} · ${row.seconds.toLocaleString()}초 · ${row.percentage.toFixed(1)}%`;
+        const track = document.createElement("div");
+        track.className = "breakdown-track";
+        track.setAttribute("aria-hidden", "true");
+        const bar = document.createElement("span");
+        bar.style.width = `${row.percentage}%`;
+        bar.style.backgroundColor = row.color;
+        track.append(bar);
+        heading.append(title, value);
+        item.append(heading, track);
+        return item;
+      });
+      document.querySelector("#subject-breakdown-list").replaceChildren(...items);
+      const empty = document.querySelector("#subject-breakdown-empty");
+      empty.hidden = total > 0;
+      empty.textContent = rows.length ? "No saved study time yet. Each subject starts at zero." : "No subjects or saved study records yet.";
+      document.querySelector("#subject-breakdown-rounding").hidden = rows.length === 0;
+      document.querySelector("#subject-breakdown-error").hidden = true;
+    } catch (problem) { showBreakdownError(problem); }
+  }
+
   function renderHistory() {
     const list = document.querySelector("#records-list");
     const listError = document.querySelector("#records-error");
     const empty = document.querySelector("#records-empty");
     listError.hidden = true;
     try {
-      const records = StudyStorage.getRecords().slice().sort((a, b) =>
+      const savedRecords = StudyStorage.getRecords();
+      renderTotal(savedRecords);
+      renderPeriods(savedRecords);
+      renderActivity(savedRecords);
+      const records = savedRecords.slice().sort((a, b) =>
         b.date.localeCompare(a.date) || Date.parse(b.createdAt) - Date.parse(a.createdAt));
       let subjects = [];
-      try { subjects = StudyStorage.getSubjects(); }
-      catch (problem) { listError.textContent = problem.message; listError.hidden = false; }
+      try {
+        subjects = StudyStorage.getSubjects();
+        renderBreakdown(savedRecords, subjects);
+      } catch (problem) {
+        listError.textContent = problem.message;
+        listError.hidden = false;
+        showBreakdownError(problem);
+      }
       const names = new Map(subjects.map(subject => [subject.id, subject.name]));
       const items = records.map(record => {
         const item = document.createElement("li");
@@ -202,6 +365,9 @@ window.Records = (() => {
       listError.textContent = problem.message;
       listError.hidden = false;
       empty.hidden = true;
+      showTotalError(problem);
+      showBreakdownError(problem);
+      showActivityError(problem);
     }
   }
 
