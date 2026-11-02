@@ -7,6 +7,8 @@
     <meta name="description" content="A calm space to keep your studies in flow." />
     <title>Dashboard · STUDY FLOW</title>
     <link rel="stylesheet" href="css/style.css" />
+    <script src="js/storage.js" defer></script>
+    <script src="js/subjects.js" defer></script>
     <script src="js/app.js" defer></script>
   </head>
   <body>
@@ -25,14 +27,14 @@
         <div class="sidebar-label">Workspace</div>
         <nav class="primary-nav" aria-label="Primary navigation">
           <ul>
-            <li class="nav-item is-active" aria-current="page">
+            <li><button type="button" class="nav-item is-active" data-view="dashboard" aria-current="page" aria-label="Dashboard">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8" stroke="currentColor" stroke-width="1.7"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8" stroke="currentColor" stroke-width="1.7"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8" stroke="currentColor" stroke-width="1.7"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8" stroke="currentColor" stroke-width="1.7"/></svg>
               <span>Dashboard</span>
-            </li>
-            <li class="nav-item" aria-disabled="true">
+            </button></li>
+            <li><button type="button" class="nav-item" data-view="subjects" aria-label="Subjects">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H20v15.5H6.5A2.5 2.5 0 0 1 4 17V6.5Z" stroke="currentColor" stroke-width="1.7"/><path d="M4 7h13M8 4v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
               <span>Subjects</span>
-            </li>
+            </button></li>
             <li class="nav-item" aria-disabled="true">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" stroke="currentColor" stroke-width="1.7"/><path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17M8 13h3m-3 3h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
               <span>Tasks &amp; Exams</span>
@@ -64,11 +66,11 @@
 
       <main class="main-content">
         <header class="topbar">
-          <div class="breadcrumb"><span>Workspace</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><strong>Dashboard</strong></div>
+          <div class="breadcrumb"><span>Workspace</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><strong id="current-view-label">Dashboard</strong></div>
           <div class="topbar-meta"><span class="today-pill"><span class="status-dot"></span> Personal space</span><span class="avatar" aria-label="Guest profile">S</span></div>
         </header>
 
-        <div class="dashboard-content">
+        <div class="dashboard-content" id="dashboard-view">
           <section class="welcome-section" aria-labelledby="welcome-title">
             <div>
               <time class="eyebrow" id="current-date">YOUR STUDY OVERVIEW</time>
@@ -90,7 +92,7 @@
             </article>
             <article class="stat-card">
               <div class="stat-card-top"><span class="stat-icon icon-violet"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H20v15.5H6.5A2.5 2.5 0 0 1 4 17V6.5Z" stroke="currentColor" stroke-width="1.8"/><path d="M4 7h13M8 4v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><span class="stat-caption">YOUR CLASSES</span></div>
-              <p class="stat-value">0</p>
+              <p class="stat-value" id="subject-count">0</p>
               <p class="stat-label">Total subjects</p>
               <p class="stat-footnote">Subjects in your workspace</p>
             </article>
@@ -132,6 +134,34 @@
 
           <footer class="page-footer"><span>Made for your next small step.</span><span>STUDY FLOW <span class="footer-separator">·</span> Keep your learning in flow</span></footer>
         </div>
+        <section class="dashboard-content subjects-view" id="subjects-view" aria-labelledby="subjects-title" hidden>
+          <header class="subjects-header">
+            <div><p class="eyebrow">YOUR LEARNING SPACE</p><h1 id="subjects-title" tabindex="-1">Subjects</h1><p class="welcome-subtitle">Keep your classes together, ready for your next session.</p></div>
+            <button class="button button-primary" id="add-subject" type="button">+ Add Subject</button>
+          </header>
+          <p id="storage-error" class="error-message" role="alert" hidden></p>
+          <p id="subject-status" class="subject-status" role="status"></p>
+          <div class="panel empty-state subjects-empty" id="subjects-empty"><span class="empty-illustration book-empty" aria-hidden="true">+</span><h2>No subjects yet</h2><p>Add your first subject to start organizing your learning.</p></div>
+          <ul id="subject-list" class="subject-list" aria-label="Registered subjects"></ul>
+        </section>
+        <dialog id="subject-dialog" aria-labelledby="subject-dialog-title">
+          <form id="subject-form" novalidate>
+            <p class="panel-kicker">YOUR SUBJECT</p><h2 id="subject-dialog-title">Add a subject</h2>
+            <p class="form-description">Give your class a name and a color.</p>
+            <label for="subject-name">Subject name <span aria-hidden="true">*</span></label>
+            <input id="subject-name" name="name" type="text" maxlength="100" required autocomplete="off" aria-describedby="subject-form-error" placeholder="e.g. Introduction to Psychology">
+            <label for="subject-color">Subject color</label>
+            <div class="color-field"><input id="subject-color" name="color" type="color" value="#567ce8"><span>Choose a color for this subject</span></div>
+            <p id="subject-form-error" class="error-message" role="alert" hidden></p>
+            <div class="form-actions"><button class="button button-secondary" id="cancel-subject" type="button">Cancel</button><button class="button button-primary" type="submit">Add Subject</button></div>
+          </form>
+        </dialog>
+        <dialog id="delete-subject-dialog" aria-labelledby="delete-subject-title" aria-describedby="delete-subject-description">
+          <h2 id="delete-subject-title">Delete subject?</h2>
+          <p id="delete-subject-description" class="form-description"></p>
+          <p id="delete-subject-error" class="error-message" role="alert" hidden></p>
+          <div class="form-actions"><button id="cancel-delete-subject" class="button button-secondary" type="button" autofocus>Cancel</button><button id="confirm-delete-subject" class="button button-danger" type="button">Delete Subject</button></div>
+        </dialog>
       </main>
     </div>
   </body>
